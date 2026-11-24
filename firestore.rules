@@ -1,0 +1,238 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isPrimaryOwner() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'mdebrahimhossain289@gmail.com' ||
+        request.auth.token.email == 'mdshohagmiya4@gmail.com'
+      );
+    }
+
+    function isAdmin() {
+      return isPrimaryOwner() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+        'id', 'productNumber', 'name', 'category', 'images',
+        'shortDescription', 'fullDescription', 'specifications',
+        'originCountry', 'stockAvailability', 'featured', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'productNumber', 'name', 'category', 'price', 'priceDisplay',
+        'images', 'shortDescription', 'fullDescription', 'specifications',
+        'originCountry', 'stockAvailability', 'featured', 'createdAt', 'updatedAt'
+      ]) &&
+      data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+      data.productNumber is string && data.productNumber.size() >= 3 && data.productNumber.size() <= 40 &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 200 &&
+      data.category is string && data.category.size() >= 2 && data.category.size() <= 100 &&
+      (!('price' in data) || data.price == null || (data.price is number && data.price >= 0)) &&
+      (!('priceDisplay' in data) || (data.priceDisplay is string && data.priceDisplay.size() <= 80)) &&
+      data.images is list && data.images.size() <= 10 &&
+      (data.images.size() == 0 || (data.images[0] is string && data.images[0].size() <= 1000)) &&
+      data.shortDescription is string && data.shortDescription.size() >= 2 && data.shortDescription.size() <= 500 &&
+      data.fullDescription is string && data.fullDescription.size() <= 5000 &&
+      data.specifications is list && data.specifications.size() <= 30 &&
+      (data.specifications.size() == 0 || (
+        data.specifications[0] is map &&
+        data.specifications[0].keys().hasOnly(['label', 'value']) &&
+        data.specifications[0].label is string && data.specifications[0].label.size() <= 120 &&
+        data.specifications[0].value is string && data.specifications[0].value.size() <= 300
+      )) &&
+      data.originCountry in ['China', 'Turkey', 'India', 'Vietnam', 'Bangladesh'] &&
+      data.stockAvailability in ['In Stock', 'Pre-Order', 'Out of Stock'] &&
+      data.featured is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['id', 'name', 'slug', 'description', 'createdAt']) &&
+      data.keys().hasOnly(['id', 'name', 'slug', 'description', 'createdAt']) &&
+      data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+      data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 120 &&
+      data.description is string && data.description.size() <= 500 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidInquiry(data) {
+      return data.keys().hasAll([
+        'id', 'customerName', 'phoneNumber', 'productNumber', 'productName',
+        'quantity', 'address', 'message', 'sheetSyncStatus', 'sheetSyncMessage', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'customerName', 'phoneNumber', 'productNumber', 'productName',
+        'quantity', 'address', 'message', 'sheetSyncStatus', 'sheetSyncMessage', 'createdAt'
+      ]) &&
+      data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+      data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 120 &&
+      data.phoneNumber is string && data.phoneNumber.size() >= 6 && data.phoneNumber.size() <= 30 &&
+      data.productNumber is string && data.productNumber.size() >= 2 && data.productNumber.size() <= 40 &&
+      data.productName is string && data.productName.size() >= 2 && data.productName.size() <= 200 &&
+      data.quantity is number && data.quantity >= 1 && data.quantity <= 999 &&
+      data.address is string && data.address.size() <= 300 &&
+      data.message is string && data.message.size() <= 1000 &&
+      data.sheetSyncStatus in ['pending', 'synced', 'failed'] &&
+      data.sheetSyncMessage is string && data.sheetSyncMessage.size() <= 300 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidChatThread(data) {
+      return data.keys().hasAll([
+        'id', 'visitorName', 'productNumber', 'lastMessage', 'status', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'visitorName', 'productNumber', 'lastMessage', 'status', 'createdAt', 'updatedAt'
+      ]) &&
+      data.id is string && data.id.size() >= 24 && data.id.size() <= 128 &&
+      data.visitorName is string && data.visitorName.size() >= 1 && data.visitorName.size() <= 100 &&
+      data.productNumber is string && data.productNumber.size() <= 40 &&
+      data.lastMessage is string && data.lastMessage.size() <= 500 &&
+      data.status in ['open', 'closed'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'senderRole', 'senderName', 'text', 'createdAt']) &&
+      data.keys().hasOnly(['id', 'senderRole', 'senderName', 'text', 'createdAt']) &&
+      data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+      data.senderRole in ['customer', 'admin'] &&
+      data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 100 &&
+      data.text is string && data.text.size() >= 1 && data.text.size() <= 1000 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+      data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+      data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+      data.email is string && data.email.size() <= 200 &&
+      data.createdAt is timestamp;
+    }
+
+    // Machinery Catalog (Public Read, Admin Write)
+    match /products/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) &&
+        incoming().id == productId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'productNumber', 'name', 'category', 'price', 'priceDisplay',
+          'images', 'shortDescription', 'fullDescription', 'specifications',
+          'originCountry', 'stockAvailability', 'featured', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // Categories (Public Read, Admin Write)
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId);
+      allow list: if true;
+      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) &&
+        incoming().id == categoryId &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'slug', 'description']);
+      allow delete: if isAdmin() && isValidId(categoryId);
+    }
+
+    // Customer Inquiries (Public Create without Login, Admin-Only Read/Update/Delete for PII Protection)
+    match /inquiries/{inquiryId} {
+      allow get: if isAdmin() && isValidId(inquiryId);
+      allow list: if isAdmin();
+      allow create: if isValidId(inquiryId) && isValidInquiry(incoming()) &&
+        incoming().id == inquiryId &&
+        incoming().sheetSyncStatus == 'pending' &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidId(inquiryId) && isValidInquiry(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['sheetSyncStatus', 'sheetSyncMessage']);
+      allow delete: if isAdmin() && isValidId(inquiryId);
+    }
+
+    // Customer Live Support Chat Threads
+    match /chats/{chatId} {
+      allow get: if isAdmin() || (isValidId(chatId) && chatId.size() >= 32);
+      allow list: if isAdmin();
+      allow create: if isValidId(chatId) && chatId.size() >= 32 && isValidChatThread(incoming()) &&
+        incoming().id == chatId &&
+        incoming().status == 'open' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isValidId(chatId) && isValidChatThread(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'status', 'updatedAt'])) ||
+          (chatId.size() >= 32 && existing().status == 'open' && incoming().status == 'open' && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'updatedAt']))
+        )
+      );
+      allow delete: if isAdmin() && isValidId(chatId);
+
+      match /messages/{messageId} {
+        allow get: if isAdmin() || (isValidId(chatId) && chatId.size() >= 32 && isValidId(messageId));
+        allow list: if isAdmin() || (isValidId(chatId) && chatId.size() >= 32);
+        allow create: if isValidId(chatId) && isValidId(messageId) && isValidChatMessage(incoming()) &&
+          incoming().id == messageId &&
+          incoming().createdAt == request.time &&
+          exists(/databases/$(database)/documents/chats/$(chatId)) &&
+          (isAdmin() || (chatId.size() >= 32 && incoming().senderRole == 'customer'));
+        allow update, delete: if false;
+      }
+    }
+
+    // Admin Users Registry
+    match /admins/{uid} {
+      allow get: if isAdmin() && isValidId(uid);
+      allow list: if isAdmin();
+      allow create, update: if isPrimaryOwner() &&
+        isValidId(uid) &&
+        isValidAdminUser(incoming()) &&
+        incoming().uid == uid;
+      allow delete: if isPrimaryOwner() &&
+        isValidId(uid);
+    }
+  }
+}

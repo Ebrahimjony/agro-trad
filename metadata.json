@@ -1,0 +1,6 @@
+{
+  "name": "Egg Rotate Machineries",
+  "description": "Quality dairy, poultry, and agricultural machinery imported from China, Turkey, India, and Vietnam. Offices in Dhaka and Bogura, Bangladesh.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

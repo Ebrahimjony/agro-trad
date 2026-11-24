@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Imported or domestic dairy, poultry, or agricultural machinery item sold by AGRO TRAD.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "productNumber": { "type": "string", "minLength": 3, "maxLength": 40, "pattern": "^[A-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "price": { "type": "number" },
+        "priceDisplay": { "type": "string", "maxLength": 80 },
+        "images": { "type": "array", "description": "Up to 10 image URLs" },
+        "shortDescription": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "fullDescription": { "type": "string", "maxLength": 5000 },
+        "specifications": { "type": "array", "description": "Up to 30 technical spec pairs" },
+        "originCountry": { "type": "string", "enum": ["China", "Turkey", "India", "Vietnam", "Bangladesh"] },
+        "stockAvailability": { "type": "string", "enum": ["In Stock", "Pre-Order", "Out of Stock"] },
+        "featured": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "productNumber",
+        "name",
+        "category",
+        "images",
+        "shortDescription",
+        "fullDescription",
+        "specifications",
+        "originCountry",
+        "stockAvailability",
+        "featured",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Machinery product category.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "slug": { "type": "string", "minLength": 2, "maxLength": 120, "pattern": "^[a-z0-9\\-]+$" },
+        "description": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "description", "createdAt"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Customer price request or order inquiry linked to a specific product number.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "phoneNumber": { "type": "string", "minLength": 6, "maxLength": 30 },
+        "productNumber": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "productName": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "quantity": { "type": "number" },
+        "address": { "type": "string", "maxLength": 300 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "sheetSyncStatus": { "type": "string", "enum": ["pending", "synced", "failed"] },
+        "sheetSyncMessage": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "customerName",
+        "phoneNumber",
+        "productNumber",
+        "productName",
+        "quantity",
+        "address",
+        "message",
+        "sheetSyncStatus",
+        "sheetSyncMessage",
+        "createdAt"
+      ]
+    },
+    "ChatThread": {
+      "title": "ChatThread",
+      "description": "Customer support chat thread stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 20, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "visitorName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "productNumber": { "type": "string", "maxLength": 40 },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "visitorName", "productNumber", "lastMessage", "status", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message inside a customer support chat thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderRole": { "type": "string", "enum": ["customer", "admin"] },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderRole", "senderName", "text", "createdAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator user record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Publicly readable machinery catalog managed exclusively by admins."
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Publicly readable machinery categories managed exclusively by admins."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/Inquiry" },
+      "description": "Customer inquiries (public create with strict validation; admin-only read, update, and delete to protect customer PII)."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/ChatThread" },
+      "description": "Customer support chat sessions (admin can list/manage all; unguessable chatId required for visitor thread)."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages belonging to a specific support chat session."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Additional administrator UIDs managed by the primary owner."
+    }
+  }
+}
